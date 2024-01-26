@@ -1,0 +1,9 @@
+#
+# Service for cv_aruco
+int32 marker_id
+sensor_msgs/Image frame
+
+---
+int32 marker_id
+geometry_msgs/Pose pose
+sensor_msgs/Image result
