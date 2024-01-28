@@ -3,15 +3,16 @@
 #
 # Copyright(C) 2023 Isao Hara
 #  All rights reserved
+import os
+import sys
+
 import rclpy
 import rclpy.node
 from rclpy.qos import qos_profile_sensor_data
-import os
+
 import copy
 import cv2
-import yaml
 import numpy as np
-import math
 import traceback
 
 from cv_bridge import CvBridge
@@ -84,14 +85,20 @@ class ArUroMarker(rclpy.node.Node):
     self.pub_result_img = self.create_publisher(Image, "result_image", 10)
     self.pub_result = self.create_publisher(PoseStamped, "result_pose", 10)
 
-    self.sev_find_marker = self.create_service(FindArucoMarker, "find_aruco_marker", self.find_aruco_marker_service)
+    self.sev_find_marker = self.create_service(FindArucoMarker, "find_aruco_marker",
+                                   self.find_aruco_marker_service)
     return
 
   #
   #
   def callback_camera_info(self, msg):
     self.cam_info=msg
-    self.mtx= np.reshape(np.array(msg.k), (3, 3))
+    self.mtx = np.reshape(np.array(msg.k), (3, 3))
+    self.dist = np.array(msg.d)
+    return
+
+  def parse_camera_info(self, msg):
+    self.mtx = np.reshape(np.array(msg.k), (3, 3))
     self.dist = np.array(msg.d)
     return
 
@@ -114,9 +121,11 @@ class ArUroMarker(rclpy.node.Node):
   def find_aruco_marker_service(self, request, response):
     try:
       if request.frame.data:
-        img_msg_ = request.frame
+        img_msg_ = request.image
+        self.parse_camera_info(request.camera_info)
       else:
         img_msg_ = self.img_msg
+
       img, markers = self.detect_ar_marker( img_msg_ )
       self.result_img_msg = self.bridge.cv2_to_imgmsg(img, encoding="passthrough")
 
@@ -180,7 +189,7 @@ class ArUroMarker(rclpy.node.Node):
       cv2.drawFrameAxes(frame, self.mtx, self.dist, rvec[n], tvec[n], self.marker_length/2)
       return pose
     except:
-      #traceback.print_exc()
+      traceback.print_exc()
       return None
 
   #

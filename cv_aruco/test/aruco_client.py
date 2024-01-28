@@ -15,6 +15,7 @@ class FindArucoMarkerClient(Node):
     super().__init__('find_aruco_marker_client')
     self.marker_id = self.declare_parameter('marker_id', 1).get_parameter_value().integer_value
     self.sub_img = self.create_subscription(Image, 'image_raw', self.callback_image, 10)
+    self.sub_info = self.create_subscription(CameraInfo, "camera_info", self.callback_camera_info, 10)
 
     #
     #
@@ -24,6 +25,7 @@ class FindArucoMarkerClient(Node):
 
     self.req = FindArucoMarker.Request()
     self.img_msg=None
+    self.cam_info=None
     #
     #
     self.timer_cb = rclpy.callback_groups.MutuallyExclusiveCallbackGroup()
@@ -35,6 +37,10 @@ class FindArucoMarkerClient(Node):
     self.img_msg=msg
     return
 
+  def callback_camera_info(self, msg):
+    self.cam_info=msg
+    return
+
   #
   #
   def request(self, marker_id):
@@ -42,7 +48,8 @@ class FindArucoMarkerClient(Node):
       self.get_logger().info("No image")
       return
     self.req.marker_id = marker_id
-    self.req.frame = self.img_msg
+    self.req.image = self.img_msg
+    self.req.camera_info = self.cam_info
     self.future = self.client.call_async(self.req)
     #rclpy.spin_until_future_complete(self, self.future)
     while not self.future.done():
